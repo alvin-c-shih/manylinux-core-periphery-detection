@@ -1,27 +1,15 @@
-deploy:
-  provider: releases
-  api_key:
-    secure: 335ed638c7fa742bf9ca52fbe2ff452f11eb19f2
-  file_glob: true
-  file: dist/*
-  skip_cleanup: true
-  on:
-    tags: true
-
 language: python
-
 matrix:
-    include:
-        - os: osx
-          language: generic
-          env: PYTHON=3.4.4
-        - os: osx
-          language: generic
-          env: PYTHON=3.5.1
-        - os: osx
-          language: generic
-          env: PYTHON=3.6.1
-
+  include:
+  - os: osx
+    language: generic
+    env: PYTHON=3.4.4
+  - os: osx
+    language: generic
+    env: PYTHON=3.5.1
+  - os: osx
+    language: generic
+    env: PYTHON=3.6.1
 before_install: |
   if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     brew update
@@ -44,10 +32,15 @@ before_install: |
     # A manual check that the correct version of Python is running.
     python --version
   fi
-
-install: 
-   - python -m pip install pybind11 
-   - python -m pip install wheel 
-
+install:
+- python -m pip install pybind11
+- python -m pip install wheel
 script:
-   - python setup.py bdist_wheel
+- python setup.py bdist_wheel
+deploy:
+  provider: releases
+  api_key:
+    secure: XIaBGX+UsYAgeGv8Q8af/qatARctRv924q9NXt6BL9hpbvbWX0PRI3Hzl2fLhfVWtSQRTHfi7UI+zuMVMFLS/lLyucPRByN6IWfEAccLvC+rlK5BsGDM0cuSd1+MfMGM0s+dfxDtMR/5OoNuCq7wgBSnt/gTn3P9H7wpELxZiegJHUb23Md4PdMBCviD+2FYZYb4I5kj//IWJLzbT3FAkTscyVm36Ke0FLfS1u+c6udKwP3fa+Ldc+7S1zWZOuOQ5Oh721I9oJOWx5wEigG/FAxMccMe2j2yGZm86IRPWXUUaUrGCb6f2kML7VajFUrdMHn8V1C+gqz7RwY6wIrH4GpM+fMgweze7X1h0PxwPx68wqNZbzANpeI6W/MjTDh+i92zBHWPjilHuePVQtupS7T/zZwwI7fabnwWCSFsjsJa1lMAXKHbORPW03zZJcn6cou2h0vtR4kXXV66zj8r+8c2Dwavv4OyJ5RtMA3haE9tWnAdJTDOshD2NyAM/58Z3uSY0d6WVw4ZJeqheVPeioq40F5X1AfyosB3bjnoj2dMKxcjH74jH3cCMM9kQkIa5zPoasnOaLB/NS13lQ3Nra+vAqhqiypJW9GuWCzbaooUltw0ink+GHZ8XdE79ivrQ2Og978sS8cxdR5Ss1e+8XXPIVI3wF/H9+c6DLS3eRY=
+  file: dist/*
+  on:
+    repo: test-skojaku/manylinux-core-periphery-detection
