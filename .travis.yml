@@ -1,3 +1,11 @@
+deploy:
+  provider: releases
+  api_key: "335ed638c7fa742bf9ca52fbe2ff452f11eb19f2"
+  file: "wheelhouse"
+  skip_cleanup: true
+  on:
+    tags: true
+
 notifications:
   email: false
 
