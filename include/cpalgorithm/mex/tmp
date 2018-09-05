@@ -1,0 +1,135 @@
+#include <array>
+#include <random>
+#include <algorithm>
+#include <bitset>
+#include <vector>
+#include <set>
+#include "mex.h"
+#include "math.h"
+#include <random>
+#include <iostream>     // std::cout, std::end
+#include <fstream>
+#if !defined(MAX)
+#define	MAX(A, B)	((A) > (B) ? (A) : (B))
+#endif
+
+#if !defined(MIN)
+#define	MIN(A, B)	((A) < (B) ? (A) : (B))
+#endif
+
+
+std::vector<std::vector<int>> adjList;
+std::vector<int> deg; 
+double calc_coreness( int ord, int N, double alpha, double beta){
+	double c = 0;
+	double bn = floor( N * beta);
+	if(ord < bn ){
+		c = (1-alpha) / (2*bn) * ord;
+	}else{
+		c = (ord-bn)*(1-alpha)/(2*((double)N-bn))  + (1+alpha)/2;
+	}
+	
+	return c;
+}
+
+double rowSum_score( int nid,  std::vector<int> ndord, int N, int M, double alpha, double beta ){
+	double rowSum_nid = 0; 
+	for( auto id : adjList[nid] ){
+		rowSum_nid+=calc_coreness( ndord[id], N, alpha, beta );
+	}
+		
+	// Subtract rowSum_score on configuration model 
+	for(int i = 0;i<N;i++){
+		rowSum_nid-= (double)(deg[nid] * deg[i]) * calc_coreness( ndord[i], N, alpha, beta ) / (double) (2*M); 
+	} 
+	
+	return rowSum_nid;
+}
+
+std::vector<int> rombach_label_switching( int N, int M, double alpha, double beta ){
+	//% --------------------------------
+	//% Initialise
+	//% --------------------------------
+	std::mt19937_64 mtrnd;
+    	int seeds[624];
+       	size_t size = 624*4; //Declare size of data
+       	std::ifstream urandom("/dev/urandom", std::ios::in | std::ios::binary); //Open stream
+       	if (urandom) //Check if stream is open
+       	{
+       	    urandom.read(reinterpret_cast<char*>(seeds), size); //Read from urandom
+       	    urandom.close(); //close stream
+       	}
+       	else //Open failed
+       	{
+            		std::cerr << "Failed to open /dev/urandom" << std::endl;
+       	}
+    	std::seed_seq seed(&seeds[0], &seeds[624]);
+    	mtrnd.seed(seed);
+	
+	std::vector<int> ndord; ndord.assign(N,0);
+	for(int i = 0;i < N;i++) ndord[i] = i;
+	std::shuffle(ndord.begin(), ndord.end(),mtrnd);
+
+	std::vector<int> ord; ord.assign(N,0);
+	for(int i = 0;i < N;i++) ord[i] = i;
+	bool isupdated = false;	
+	do{
+		isupdated = false;	
+		std::shuffle(ord.begin(), ord.end(), mtrnd);
+		for(int i = 0; i < N; i++){	
+			int nid = ord[i]; // Get the id of node we shall update
+			// calculate gain obtained by swapping label of nid and other labls
+			double c_nid = calc_coreness( ndord[nid], N, alpha, beta );
+			double rowSum_nid = rowSum_score(nid, ndord, N, M, alpha, beta );
+			int nextnid = nid; double dQmax = - std::numeric_limits<double>:: max();
+			for( int sid =0;sid<N;sid++ ){
+				if(sid==nid) continue;
+				double c_sid = calc_coreness( ndord[sid], N, alpha, beta );
+				double rowSum_sid = rowSum_score(sid, ndord, N, M, alpha, beta );
+				double dQ = (c_sid - c_nid) * rowSum_nid + (c_nid - c_sid) * rowSum_sid;
+				if(dQmax < dQ){
+					nextnid = sid;
+					dQmax = dQ;
+				}
+			}
+			if( dQmax <= std::numeric_limits<double>::epsilon()) continue;
+			
+			int tmp = ndord[nid];
+			ndord[nid] = ndord[nextnid];
+			ndord[nextnid]  = tmp;
+		}
+	}while( isupdated );	
+	return ndord;
+} 
+
+void mexFunction( int nlhs, mxArray *plhs[], 
+		  int nrhs, const mxArray*prhs[] )
+{ 
+   	double* edgeList =  mxGetPr(prhs[0]);
+   	int N = (int) mxGetPr(prhs[1])[0];
+   	int M = (int) mxGetPr(prhs[2])[0]; //length of edge list
+   	double alpha = mxGetPr(prhs[3])[0];
+   	double beta = mxGetPr(prhs[4])[0];
+	
+	for(int i = 0;i < N;i++){
+		std::vector<int> tmp;
+		adjList.push_back(tmp);
+	}
+	for(int i = 0;i<M;i++){
+		int rid = (edgeList[i]-1);
+		int cid = (edgeList[i+M]-1);
+		adjList[rid].push_back(cid);
+		adjList[cid].push_back(rid);
+	}	
+	deg.assign(N,0);
+	for( int i = 0;i < N;i++ ){
+		deg[i] = adjList[i].size();	
+	} 
+	
+	std::vector<int> C = rombach_label_switching(N,M, alpha, beta);
+    	plhs[0] = mxCreateDoubleMatrix( (mwSize)N, (mwSize)1, mxREAL); 
+    	double* R = mxGetPr(plhs[0]);
+	for(int i = 0;i<N;i++){
+		R[i] = calc_coreness( C[i], N, alpha, beta) ;	
+	}	
+}
