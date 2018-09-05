@@ -32,6 +32,7 @@ before_install: |
     # A manual check that the correct version of Python is running.
     python --version
   fi
+
 install:
 - python -m pip install pybind11
 - python -m pip install wheel
@@ -44,3 +45,4 @@ deploy:
   file: dist/*
   on:
     repo: test-skojaku/manylinux-core-periphery-detection
+  all_branches: true
